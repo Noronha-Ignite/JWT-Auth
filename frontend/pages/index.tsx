@@ -1,11 +1,14 @@
 import type { NextPage } from 'next';
 import { FormEvent, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 const Home: NextPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleSubmit = (e: FormEvent) => {
+  const { signIn } = useAuth();
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     const data = {
@@ -13,7 +16,7 @@ const Home: NextPage = () => {
       password,
     };
 
-    console.log(data);
+    await signIn(data);
   };
 
   return (
