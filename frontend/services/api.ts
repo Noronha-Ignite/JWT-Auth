@@ -1,7 +1,14 @@
 import axios, { AxiosError } from 'axios';
 import { parseCookies, setCookie } from 'nookies';
 
+type Request = {
+  onSuccess: (token: string) => void;
+  onFailure: (err: AxiosError) => void;
+};
+
 let cookies = parseCookies();
+let isRefreshing = false;
+let failedRequestsQueue: Request[] = [];
 
 export const api = axios.create({
   baseURL: 'http://localhost:3333',
@@ -18,26 +25,55 @@ api.interceptors.response.use(
         cookies = parseCookies();
 
         const { '@jwtauth.refreshToken': refreshToken } = cookies;
+        const originalConfig = error.config;
 
-        api
-          .post('/refresh', {
-            refreshToken,
-          })
-          .then((response) => {
-            const { token } = response.data;
+        if (!isRefreshing) {
+          isRefreshing = true;
 
-            setCookie(undefined, '@jwtauth.token', token, {
-              maxAge: 60 * 60 * 24 * 30, // 30 days
-              path: '/',
+          api
+            .post('/refresh', {
+              refreshToken,
+            })
+            .then((response) => {
+              const { token } = response.data;
+
+              setCookie(undefined, '@jwtauth.token', token, {
+                maxAge: 60 * 60 * 24 * 30, // 30 days
+                path: '/',
+              });
+              setCookie(undefined, '@jwtauth.refreshToken', response.data.refreshToken, {
+                maxAge: 60 * 60 * 24 * 30, // 30 days
+                path: '/',
+              });
+
+              // @ts-ignore: Unreachable code error
+              api.defaults.headers['Authorization'] = `Bearer ${token}`;
+
+              failedRequestsQueue.forEach((request) => request.onSuccess(token));
+              failedRequestsQueue = [];
+            })
+            .catch((err) => {
+              failedRequestsQueue.forEach((request) => request.onFailure(err));
+              failedRequestsQueue = [];
+            })
+            .finally(() => {
+              isRefreshing = false;
             });
-            setCookie(undefined, '@jwtauth.refreshToken', response.data.refreshToken, {
-              maxAge: 60 * 60 * 24 * 30, // 30 days
-              path: '/',
-            });
+        }
 
-            // @ts-ignore: Unreachable code error
-            api.defaults.headers['Authorization'] = `Bearer ${ token }`
+        return new Promise((resolve, reject) => {
+          failedRequestsQueue.push({
+            onSuccess: (token: string) => {
+              // @ts-ignore: Unreachable code error
+              originalConfig.headers['Authorization'] = `Bearer ${token}`;
+
+              resolve(api(originalConfig));
+            },
+            onFailure: (err: AxiosError) => {
+              reject(err);
+            },
           });
+        });
       } else {
         // Deslogar usuario
       }
