@@ -1,8 +1,8 @@
 import Router from 'next/router';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { setCookie, parseCookies } from 'nookies';
+import { setCookie, parseCookies, destroyCookie } from 'nookies';
 
-import { api } from '../services/api';
+import { api, signOut } from '../services/api';
 
 type SignInCredentials = {
   email: string;
@@ -45,6 +45,8 @@ export const AuthContextWrapper: React.FC = ({ children }) => {
           permissions,
           roles,
         });
+      }).catch(() => {
+        signOut();
       });
     }
   }, []);
