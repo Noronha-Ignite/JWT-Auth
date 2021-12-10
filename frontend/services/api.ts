@@ -3,6 +3,7 @@ import { GetServerSidePropsContext, NextPageContext, PreviewData } from 'next';
 import Router from 'next/router';
 import { destroyCookie, parseCookies, setCookie } from 'nookies';
 import { ParsedUrlQuery } from 'querystring';
+import { AuthTokenError } from '../errors/AuthTokenError';
 
 type Request = {
   onSuccess: (token: string) => void;
@@ -69,6 +70,8 @@ export function setUpApiClient(ctx?: GetServerSidePropsContext<ParsedUrlQuery, P
 
                 if (process.browser) {
                   signOut();
+                } else {
+                  return Promise.reject(new AuthTokenError());
                 }
               })
               .finally(() => {
