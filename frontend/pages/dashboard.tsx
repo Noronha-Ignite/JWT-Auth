@@ -1,6 +1,5 @@
 import { Can } from '../components/Can';
 import { useAuth } from '../contexts/AuthContext';
-import { useCan } from '../hooks/useCan';
 import { setUpApiClient } from '../services/api';
 import { withSSRAuth } from '../utils/withSSRAuth';
 
