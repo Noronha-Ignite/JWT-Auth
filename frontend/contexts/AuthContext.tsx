@@ -2,7 +2,6 @@ import Router from 'next/router';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { setCookie, parseCookies, destroyCookie } from 'nookies';
 
-import { signOut } from '../services/api';
 import { api } from '../services/apiClient';
 
 type SignInCredentials = {
@@ -12,6 +11,7 @@ type SignInCredentials = {
 
 type AuthContextProps = {
   signIn: (credentials: SignInCredentials) => Promise<void>;
+  signOut: () => void;
   user: User | null;
   isAuthenticated: boolean;
 };
@@ -30,11 +30,37 @@ type User = {
   roles: string[];
 };
 
+export function signOut() {
+  destroyCookie(undefined, '@jwtauth.token');
+  destroyCookie(undefined, '@jwtauth.refreshToken');
+
+  authChannel.postMessage('signOut');
+
+  Router.push('/');
+}
+
 const AuthContext = createContext({} as AuthContextProps);
+
+let authChannel: BroadcastChannel;
 
 export const AuthContextWrapper: React.FC = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const isAuthenticated = !!user;
+
+  useEffect(() => {
+    authChannel = new BroadcastChannel('auth');
+
+    authChannel.onmessage = (message) => {
+      switch (message.data) {
+        case 'signOut':
+          signOut();
+          authChannel.close();
+          break;
+        default:
+          break
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const { '@jwtauth.token': token } = parseCookies();
@@ -86,7 +112,7 @@ export const AuthContextWrapper: React.FC = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ signIn, isAuthenticated, user }}>
+    <AuthContext.Provider value={{ signIn, signOut, isAuthenticated, user }}>
       {children}
     </AuthContext.Provider>
   );

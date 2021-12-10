@@ -1,8 +1,8 @@
 import axios, { AxiosError } from 'axios';
-import { GetServerSidePropsContext, NextPageContext, PreviewData } from 'next';
-import Router from 'next/router';
-import { destroyCookie, parseCookies, setCookie } from 'nookies';
+import { GetServerSidePropsContext, PreviewData } from 'next';
+import { parseCookies, setCookie } from 'nookies';
 import { ParsedUrlQuery } from 'querystring';
+import { signOut } from '../contexts/AuthContext';
 import { AuthTokenError } from '../errors/AuthTokenError';
 
 type Request = {
@@ -12,12 +12,6 @@ type Request = {
 
 let isRefreshing = false;
 let failedRequestsQueue: Request[] = [];
-
-export function signOut() {
-  destroyCookie(undefined, '@jwtauth.token');
-  destroyCookie(undefined, '@jwtauth.refreshToken');
-  Router.push('/');
-}
 
 export function setUpApiClient(ctx?: GetServerSidePropsContext<ParsedUrlQuery, PreviewData>) {
   let cookies = parseCookies(ctx);
