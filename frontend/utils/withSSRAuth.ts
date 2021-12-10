@@ -18,15 +18,21 @@ export function withSSRAuth<P>(fn: GetServerSideProps<P>) {
     try {
       return await fn(ctx);
     } catch (err) {
-      destroyCookie(ctx, '@jwtauth.token');
-      destroyCookie(ctx, '@jwtauth.refreshToken');
+      if (err instanceof AuthTokenError) {
+        destroyCookie(ctx, '@jwtauth.token');
+        destroyCookie(ctx, '@jwtauth.refreshToken');
+  
+        return {
+          redirect: {
+            destination: '/',
+            permanent: false,
+          },
+        };
+      }
 
       return {
-        redirect: {
-          destination: '/',
-          permanent: false,
-        },
-      };
+        notFound: true,
+      }
     }
   };
 }
